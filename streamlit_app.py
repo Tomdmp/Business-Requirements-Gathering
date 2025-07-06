@@ -7,7 +7,7 @@ llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash",  # You can use gemini-1.5-pro if needed
     google_api_key=st.secrets["GOOGLE_API_KEY"],
     convert_system_message_to_human=True
-
+)
 st.title("ChatGPT-like clone")
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])

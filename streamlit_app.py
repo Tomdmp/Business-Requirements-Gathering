@@ -1,14 +1,13 @@
 import streamlit as st
-from rag_pipeline import generate_response
-from db_utils import store_requirements 
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 st.title("Business Requirements Chatbot") 
+
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash") 
+
 
 user_input = st.text_input("Enter a copy of a transcript, email or document:")
 
 if user_input: 
-  response_json = generate_response(user_input)
-  st.json(response_json)
-  result = store_requirements(response_json)
-  st.success("Requirements saved to database")
-
+  response = llm.invoke(user_input)
+  st.write(response.content)

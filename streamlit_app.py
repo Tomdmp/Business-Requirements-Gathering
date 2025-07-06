@@ -8,10 +8,7 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=st.secrets["GOOGLE_API_KEY"],
     convert_system_message_to_human=True
 )
-st.title("ChatGPT-like clone")
-
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
+st.title("Gemini-like clone")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

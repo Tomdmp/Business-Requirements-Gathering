@@ -2,6 +2,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
 
+def load_system_prompt():
+    with open("system_prompt.txt", "r") as file:
+        return file.read()
+system_prompt = SystemMessage(content=load_system_prompt())
 
 # Set up Gemini model
 llm = ChatGoogleGenerativeAI(
@@ -10,14 +14,7 @@ llm = ChatGoogleGenerativeAI(
     convert_system_message_to_human=True
 )
 
-st.title("Gemini-like clone")
-
-system_prompt = SystemMessage(
-    content=(
-        "You are a helpful AI assistant that helps consultants extract and structure project requirements from client conversations. "
-        "Keep answers concise, clear, and structured. Assume the client is non-technical unless stated otherwise. At the start of every response you must say: This is what I think Tom:"
-    )
-)
+st.title("Business Requirements Gathering")
 
 # Initialize chat history
 if "messages" not in st.session_state:

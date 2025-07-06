@@ -24,8 +24,8 @@ if prompt := st.chat_input("What is up?"):
 
         # Build message list for Gemini
     message_chain = [
-        HumanMessage(msg["content"]) if msg["role"] == "user" else AIMessage(msg["content"])
-        for msg in st.session_state.messages
+        HumanMessage(message["content"]) if message["role"] == "user" else AIMessage(message["content"])
+        for message in st.session_state.messages
     ]
 
 

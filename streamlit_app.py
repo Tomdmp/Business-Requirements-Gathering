@@ -23,14 +23,14 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
 
         # Build message list for Gemini
-    message_chain = [
-        HumanMessage(message["content"]) if message["role"] == "user" else AIMessage(message["content"])
-        for message in st.session_state.messages
-    ]
+    #message_chain = [
+     #   HumanMessage(message["content"]) if message["role"] == "user" else AIMessage(message["content"])
+      #  for message in st.session_state.messages
+    #]
 
 
     with st.chat_message("assistant"):
-        response = llm.invoke(message_chain)
+        response = llm.invoke(prompt)
         st.markdown(response.content)
         
     st.session_state.messages.append({"role": "assistant", "content": response})

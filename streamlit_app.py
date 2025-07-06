@@ -2,10 +2,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
 
-def load_system_prompt():
-    with open("system_prompt.txt", "r") as file:
+def load_txt(file_path):
+    with open(file_path, "r") as file:
         return file.read()
-system_prompt = SystemMessage(content=load_system_prompt())
+
+system_prompt = SystemMessage(content=load_txt("system_prompt.txt"))
+json_instruction = load_txt("json_template.txt")
 
 # Set up Gemini model
 llm = ChatGoogleGenerativeAI(
@@ -47,3 +49,18 @@ if prompt := st.chat_input("What is up?"):
 
     # Save assistant reply
     st.session_state.messages.append({"role": "assistant", "content": response.content})
+
+# Generate JSON output from chat when a button clicked
+if st.button("Generate JSON Summary"):
+    with st.spinner("Generating summary..."):
+        # Append user instruction to generate JSON
+        final_chain = [system_prompt] + [
+            HumanMessage(m["content"]) if m["role"] == "user" else AIMessage(m["content"])
+            for m in st.session_state.messages
+        ] + [HumanMessage(content=f"Using this format:\n{json_instruction}\nPlease summarise the conversation as JSON.")]
+
+        json_response = llm.invoke(final_chain)
+
+        st.subheader("🧾 JSON Output")
+        st.code(json_response.content, language="json")
+

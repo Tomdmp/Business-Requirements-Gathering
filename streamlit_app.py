@@ -1,52 +1,39 @@
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, AIMessage
 import streamlit as st
-import random
-import time
+
+# Set up the Gemini model using your secret key
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.0-flash",  # You can use gemini-1.5-pro if needed
+    google_api_key=st.secrets["GOOGLE_API_KEY"],
+    convert_system_message_to_human=True
+
+st.title("ChatGPT-like clone")
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 
-# Streamed response emulator
-def response_generator():
-    response = random.choice(
-        [
-            "Hello there! How can I assist you today?",
-            "Hi, human! Is there anything I can help you with?",
-            "Do you need help?",
-        ]
-    )
-    for word in response.split():
-        yield word + " "
-        time.sleep(0.05)
-
-
-st.title("Simple chat")
-
-# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages from history on app rerun
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Accept user input
 if prompt := st.chat_input("What is up?"):
-    # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
-    # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Display assistant response in chat message container
+        # Build message list for Gemini
+    message_chain = [
+        HumanMessage(msg["content"]) if msg["role"] == "user" else AIMessage(msg["content"])
+        for msg in st.session_state.messages
+    ]
+
+
     with st.chat_message("assistant"):
-        response = st.write_stream(response_generator())
-    # Add assistant response to chat history
+        response = llm.invoke(message_chain)
+        st.markdown(response.content)
+        
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-#llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash") 
-
-
-#user_input = st.text_input("Enter a copy of a transcript, email or document:")
-
-#if user_input: 
-#  response = llm.invoke(user_input)
-#  st.write(response.content)

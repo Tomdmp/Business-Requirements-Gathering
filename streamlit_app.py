@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
+
 
 # Set up Gemini model
 llm = ChatGoogleGenerativeAI(
@@ -10,6 +11,13 @@ llm = ChatGoogleGenerativeAI(
 )
 
 st.title("Gemini-like clone")
+
+system_prompt = SystemMessage(
+    content=(
+        "You are a helpful AI assistant that helps consultants extract and structure project requirements from client conversations. "
+        "Keep answers concise, clear, and structured. Assume the client is non-technical unless stated otherwise. At the start of every response you must say: This is what I think Tom:"
+    )
+)
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -29,7 +37,7 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
 
     # Convert chat history to LangChain format
-    message_chain = [
+    message_chain = [system_prompt] + [
         HumanMessage(m["content"]) if m["role"] == "user" else AIMessage(m["content"])
         for m in st.session_state.messages
     ]

@@ -1,0 +1,24 @@
+# Requirements for track_app.py - RAG-powered Streamlit chatbot
+
+# Core Streamlit
+streamlit>=1.28.0
+
+# LangChain and related packages
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-community>=0.0.20
+langchain-google-genai>=1.0.0
+langchain-huggingface>=0.0.1
+langgraph>=0.0.40
+
+# Vector store and embeddings
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.0
+
+# Document processing
+unstructured[docx]>=0.10.0
+python-docx>=0.8.11
+
+# Additional utilities
+numpy>=1.24.0
+pandas>=2.0.0

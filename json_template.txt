@@ -1,7 +1,10 @@
 Using the information provided by the user about a new client and their business requirements can you use this JSON template, which shows an example of another business, to generate a new JSON file.
-Each field should be filled, any information that is unknown just put NULL. This is a template make sure the titles are consistent. For the Requirements tale - the InteractionsID table the RawText is simply the user prompt for example the whole transcript of a conversation or the whole email. The ExtractedSummary should be a summary of the raw text. This applies to the Constraints table as well. This is a template and can be expanded accordingly such as if more Requirements, Constraints or ProjectTechnology needs to be added. 
+Each field should be filled.
+Any information that is unknown just put NULL. 
+This is a template make sure the titles are consistent.
+For the Requirements tale - the InteractionsID table the RawText is simply the user prompt for example the whole transcript of a conversation or the whole email. The ExtractedSummary should be a summary of the raw text. This applies to the Constraints table as well. This is a template and can be expanded accordingly such as if more Requirements, Constraints or ProjectTechnology needs to be added. 
 
-
+You must only output the JSON nothing else. 
 input = {
   "Clients": {
       "ClientName": "Acme Corp",

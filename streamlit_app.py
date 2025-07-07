@@ -8,6 +8,7 @@ def load_txt(file_path):
 
 system_prompt = SystemMessage(content=load_txt("system_prompt.txt"))
 json_instruction = load_txt("json_template.txt")
+summary_prompt = SystemMessage(content=load_txt("summary_prompt.txt"))
 
 # Set up Gemini model
 llm = ChatGoogleGenerativeAI(
@@ -63,4 +64,16 @@ if st.button("Generate JSON Summary"):
 
         st.subheader("🧾 JSON Output")
         st.code(json_response.content, language="json")
+        
+#Summary of requirements Button
+if st.button("Create Summary of Requirements"):
+    message_chain = [summary_prompt] + [
+        HumanMessage(m["content"]) if m["role"] == "user" else AIMessage(m["content"])
+        for m in st.session_state.messages
+    ]
 
+    response = llm.invoke(message_chain)
+
+    # Display the summary
+    st.subheader("📝 Summary of Requirements")
+    st.markdown(response.content)

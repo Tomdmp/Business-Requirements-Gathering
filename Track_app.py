@@ -9,8 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.document_loaders import UnstructuredWordDocumentLoader
 from langgraph.graph import START, StateGraph
 from langchain_core.messages import HumanMessage
-import faiss
-import tempfile
+
 
 # Page configuration
 st.set_page_config(page_title="RAG-Powered Trackbot", page_icon="🤖", layout="wide")
@@ -91,18 +90,18 @@ def setup_rag_pipeline(vector_store, llm):
             if docs_content:
                 prompt_text = f"""You are a helpful assistant. Use the following context to answer the user's question. If the context doesn't contain relevant information, say so.
 
-Context:
-{docs_content}
+                Context:
+                {docs_content}
 
-Question: {state["question"]}
+                Question: {state["question"]}
 
-Answer:"""
+                Answer:"""
             else:
                 prompt_text = f"""You are a helpful assistant. Answer the user's question to the best of your ability.
 
-Question: {state["question"]}
+                Question: {state["question"]}
 
-Answer:"""
+                Answer:"""
 
             # Get response from LLM
             response = llm.invoke([HumanMessage(content=prompt_text)])

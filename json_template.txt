@@ -1,3 +1,6 @@
+Using the information provided by the user about a new client and their business requirements can you use this JSON template, which shows an example of another business, to generate a new JSON file.
+Each field should be filled, any information that is unknown just put NULL. This is a template make sure the titles are consistent. For the Requirements tale - the InteractionsID table the RawText is simply the user prompt for example the whole transcript of a conversation or the whole email. The ExtractedSummary should be a summary of the raw text. This applies to the Constraints table as well. This is a template and can be expanded accordingly such as if more Requirements, Constraints or ProjectTechnology needs to be added. 
+
 
 input = {
   "Clients": {
@@ -18,7 +21,7 @@ input = {
   },
    "Requirements": [
   {
-    "Source": {
+    "InteractionID": {
              "Timestamp": "2025-06-26T10:00:00",
              "SourceTypeID": "Email",
              "RawText": "[Full transcript here]",
@@ -30,7 +33,7 @@ input = {
     "RequirementCategoryID": "Data & Analytics”
   },
   {
-    "Source": {
+    "InteractionID": {
              "Timestamp": "2025-03-14T15:30:00",
              "SourceTypeID": "Teams Call",
              "RawText": "[Full transcript here]",
@@ -47,7 +50,7 @@ input = {
     "ConstraintType": "Budget",
     "Description": "Must stay within £80,000 allocated capital.",
     "Severity": "High",
-    "Source": {
+    "InteractionID": {
              "Timestamp": "2025-03-09T11:00:00",
              "SourceTypeID": "In-person",
              "RawText": "[Full transcript here]",
@@ -58,7 +61,7 @@ input = {
     "ConstraintType": "Timeframe",
     "Description": "Project must be completed by end of Q4.",
     "Severity": "Medium",
-    "Source": {
+    "InteractionID": {
              "Timestamp": "2025-08-17T12:30:00",
              "SourceTypeID": "Phone call",
              "RawText": "[Full transcript here]",

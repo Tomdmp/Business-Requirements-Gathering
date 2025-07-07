@@ -3,7 +3,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
 
 def load_txt(file_path):
-    with open(file_path, "r") as file:
+    with open(file_path,  encoding='utf-8') as file:
         return file.read()
 
 system_prompt = SystemMessage(content=load_txt("system_prompt.txt"))

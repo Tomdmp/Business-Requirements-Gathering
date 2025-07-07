@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import streamlit as st
+import io 
 
 def load_txt(file_path):
     with open(file_path, "r") as file:
@@ -64,6 +65,17 @@ if st.button("Generate JSON Summary"):
 
         st.subheader("🧾 JSON Output")
         st.code(json_response.content, language="json")
+
+         # ✅ Convert to file-like object for download
+        json_bytes = io.BytesIO(json_response.content.encode("utf-8"))
+
+        # ✅ Add download button
+        st.download_button(
+            label="📥 Download JSON",
+            data=json_bytes,
+            file_name="requirements_summary.json",
+            mime="application/json"
+        )
         
 #Summary of requirements Button
 if st.button("Create Summary of Requirements"):

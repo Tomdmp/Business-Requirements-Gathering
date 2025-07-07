@@ -1,0 +1,1 @@
+Based on this conversation, generate a summary of functional and non-functional requirements.

@@ -67,12 +67,12 @@ if st.button("Generate JSON Summary"):
         
 #Summary of requirements Button
 if st.button("Create Summary of Requirements"):
-    message_chain = [summary_prompt] + [
+    summary_chain = [system_prompt] + [summary_prompt] + [
         HumanMessage(m["content"]) if m["role"] == "user" else AIMessage(m["content"])
         for m in st.session_state.messages
     ]
 
-    response = llm.invoke(message_chain)
+    response = llm.invoke(summary_chain)
 
     # Display the summary
     st.subheader("📝 Summary of Requirements")

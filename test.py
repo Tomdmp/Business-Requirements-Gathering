@@ -35,7 +35,7 @@ def initialize_rag_components():
     """Initialize RAG components once and cache them."""
     try:
         # Initialize embeddings
-        embedding_model = HuggingFaceEmbeddings(model_name="all-mpnet-base-v2")
+        embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
         
         # Load knowledge base document
         knowledge_base_path = "knowledge base.docx"

@@ -1,13 +1,23 @@
-Using the information provided by the user about a new client and their business requirements can you use this JSON template, which shows an example of another business, to generate a new JSON file.
-Each field should be filled.
-Any information that is unknown just put NULL. 
-This is a template make sure the titles are consistent.
-For the Requirements tale - the InteractionsID table the RawText is simply the user prompt for example the whole transcript of a conversation or the whole email. The ExtractedSummary should be a summary of the raw text. This applies to the Constraints table as well. This is a template and can be expanded accordingly such as if more Requirements, Constraints or ProjectTechnology needs to be added. 
+Please analyze the communication dump and:
+1. Extract all available information that matches the knowledge base requirements
+2. Identify any missing required information
+3. If information is missing, ask specific questions to obtain it
+4. Format your response clearly with these sections:
 
-You must only output the JSON nothing else. 
-input = {
+EXTRACTED DATA:
+[List all information found in key: value format]
+
+MISSING DATA:
+[List specific fields/information still needed]
+
+QUESTIONS FOR CLARIFICATION:
+[Specific questions to ask the user to get missing information]
+
+
+Example of JSON of all data that needs to be extracted: 
+{
   "Clients": {
-      "ClientName": "Acme Corp",
+      "ClientName": "Jane Doe",
       "ContactEmail": "contact@acme.com",
       "ContactNumber": "+44 1234 567890",
       "Location": "London, UK",
@@ -22,52 +32,53 @@ input = {
       "Budget": 80000,
       "DeliveryModel": "Cloud"
   },
-   "Requirements": [
+  "Requirements": [
   {
     "InteractionID": {
              "Timestamp": "2025-06-26T10:00:00",
              "SourceTypeID": "Email",
-             "RawText": "[Full transcript here]",
+             "RawText": "Transcript: Consultant–Client Call Summary Date: 26 June 2025 Time: 3:00 PM Location: Virtual Meeting (Zoom) Client: Hey, thanks for getting back to us...",
              "ExtractedSummary": "Client wants cloud-based BI dashboard integrated with Salesforce."},
     "Type": "Functional",
     "Description": "Dashboards must display live sales data from Salesforce.",
     "Status": "Confirmed",
     "PriorityType": "Must",
-    "RequirementCategoryID": "Data & Analytics”
+    "RequirementCategoryID": "Data & Analytics"
   },
   {
     "InteractionID": {
              "Timestamp": "2025-03-14T15:30:00",
              "SourceTypeID": "Teams Call",
-             "RawText": "[Full transcript here]",
+             "RawText": "From: projects@nexorahealth.com To: Consultant Team Date: 3 July 2025 Location: Manchester, UK Hi there, Thanks for connecting earlier today. I wanted to...",
              "ExtractedSummary": "Client is exploring edge computing infrastructure to optimize factory sensor analytics."},
     "Type": "Non-functional",
     "Description": "Business users should be able to edit visualisations without IT help.",
     "Status": "In Review",
     "PriorityType": "Should",
-    "RequirementCategoryID": "Data & Analytics”
+    "RequirementCategoryID": "Data & Analytics"
   }
   ],
   "Constraints": [
   {
-    "ConstraintType": "Budget",
+    "ConstraintTypeID": "Budget",
     "Description": "Must stay within £80,000 allocated capital.",
     "Severity": "High",
     "InteractionID": {
              "Timestamp": "2025-03-09T11:00:00",
              "SourceTypeID": "In-person",
-             "RawText": "[Full transcript here]",
+             "RawText": "From: projects@nexorahealth.com To: Consultant Team Date: 3 July 2025 Location: Manchester, UK Hi there, Thanks for connecting earlier today. I wanted to...",
              "ExtractedSummary": "Client proposes a smart ticketing system using QR codes and IoT-enabled kiosks."}
- 
+
+
   },
   {
-    "ConstraintType": "Timeframe",
+    "ConstraintTypeID": "Timeframe",
     "Description": "Project must be completed by end of Q4.",
     "Severity": "Medium",
     "InteractionID": {
              "Timestamp": "2025-08-17T12:30:00",
              "SourceTypeID": "Phone call",
-             "RawText": "[Full transcript here]",
+             "RawText": "Transcript: Consultant–Client Call Summary Date: 26 June 2025 Time: 3:00 PM Location: Virtual Meeting (Zoom) Client: Hey, thanks for getting back to us...",
              "ExtractedSummary": "Client requires multilingual chatbot solution trained on existing Zendesk ticket archive."}
   }
   ],
@@ -98,5 +109,6 @@ input = {
       "Category": "BI"
     }
   ]
- 
+
 }
+

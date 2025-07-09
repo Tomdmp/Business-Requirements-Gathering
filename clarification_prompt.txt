@@ -5,7 +5,7 @@ You should use this JSON example to ask more questions to gather the information
 The end goal is to fill a JSON like this with all the information extracted. 
 
 EXTRACTED DATA:
-[List all information found in key: value format]
+[List all information found in a Json format like the Example]
 
 MISSING DATA:
 [List specific fields/information still needed]

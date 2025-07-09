@@ -1,11 +1,11 @@
 # RAG-Powered Chatbot Setup Instructions
 
 ## Overview
-The `track_app.py` file is a new Streamlit chatbot application that combines:
-- Your Jupyter notebook RAG implementation (FAISS + HuggingFace embeddings)
+The `track_app.py` file is a Streamlit chatbot application that combines:
+- Retrieval-Augmented Generation (RAG) pipeline using FAISS and HuggingFace embeddings
 - Google Gemini AI for chat responses
 - Pre-loaded knowledge base from 'knowledge base.docx'
-- Interactive chat interface
+- Interactive chat interface with clarification logic
 
 ## Setup Instructions
 
@@ -35,16 +35,19 @@ streamlit run track_app.py
 - No manual upload required
 
 ### RAG-Powered Chat
-- Ask questions about the knowledge base content
 - AI searches the knowledge base for relevant content
 - Responses are generated using both document context and Gemini's knowledge
-- Source documents are shown for transparency
+
+### Clarification Logic
+- Handles missing fields by asking clarification questions
+- Iteratively refines responses based on user input
+- Sends clarification answers back to the RAG pipeline for further processing
 
 ### Chat Interface
 - Persistent chat history during session
 - Clear chat history option
 - Real-time response generation
-- Source document references
+
 
 ## How It Works
 
@@ -59,15 +62,19 @@ streamlit run track_app.py
    - Top 3 most similar document chunks are retrieved
    - Gemini generates response using retrieved context + user question
 
-3. **LangGraph Integration**:
-   - Uses the same StateGraph pattern from your notebook
-   - Sequential retrieve → generate workflow
+3. **Clarification Process**:
+   - Missing fields are identified in the AI response
+   - Clarification questions are generated and presented to the user
+   - User answers are sent back to the RAG pipeline for iterative refinement
+
+4. **LangGraph Integration**:
+   - Uses the StateGraph pattern for sequential retrieve → generate workflow
    - Proper error handling throughout
 
 ## Key Differences from streamlit_app.py
 
 - **Pre-loaded knowledge base**: Automatically loads 'knowledge base.docx'
-- **No file upload needed**: Knowledge base is ready immediately
+- **Clarification logic**: Iteratively refines responses based on user input
 - **RAG integration**: Uses vector search instead of just chat history
 - **Source transparency**: Shows which documents informed the response
 - **Caching**: Uses Streamlit caching for better performance

@@ -28,6 +28,7 @@ def load_txt(file_path):
 # Load prompts from external files
 clarification_prompt = SystemMessage(content=load_txt("clarification_prompt.txt"))
 input_instruction = SystemMessage(content=load_txt("input_prompt.txt"))
+Get_Json_prompt = SystemMessage(content=load_txt("Get_Json_prompt.txt"))
 
 @st.cache_resource
 def initialize_rag_components():
@@ -103,37 +104,15 @@ def setup_rag_pipeline(vector_store, llm):
         try:
             # Prepare context from retrieved documents (knowledge base requirements)
             docs_content = "\n\n".join(doc.page_content for doc in state.get("context", []))
-            clarification_msg = state.get("clarification_msg", "")
 
-            # Include chat history in the prompt
-            chat_history = "\n".join(
-                f"{message['role'].capitalize()}: {message['content']}" for message in st.session_state.messages
-            )
-            
             # Create specialized prompt for communication analysis
-            if docs_content and not clarification_msg:
+            if docs_content:
                 prompt_text = f""" {input_instruction.content} 
                 Knowledge Base  (use this to understand what data is needed):
                 {docs_content}
 
                 Communication Dump to Analyze:
                 {state["question"]}"""
-            elif docs_content and clarification_msg:
-                prompt_text = f""" {clarification_prompt.content} 
-                Knowledge Base  (use this to understand what data is needed):
-                {docs_content}
-
-                Here is the chat history between the user and the AI:
-                {state["question"]}
-
-                Analysis: """
-            elif clarification_msg:
-                prompt_text = f""" {clarification_prompt.content} 
-                Communication Dump to Analyze:
-                Here is the chat history between the user and the AI:
-                {state["question"]}
-
-                Analysis: """
             else:
                 prompt_text = f""" {input_instruction.content} 
                 Communication Dump to Analyze:
@@ -176,24 +155,11 @@ def extract_structured_data(response_text: str) -> Dict[str, Any]:
     """Extract structured data from AI response."""
     extracted_data = {}
     
-    # Look for EXTRACTED DATA section
-    if "EXTRACTED DATA:" in response_text:
-        extracted_section = response_text.split("EXTRACTED DATA:")[1]
-        if "MISSING DATA:" in extracted_section:
-            extracted_section = extracted_section.split("MISSING DATA:")[0]
-        elif "QUESTIONS FOR CLARIFICATION:" in extracted_section:
-            extracted_section = extracted_section.split("QUESTIONS FOR CLARIFICATION:")[0]
-        
-        # Parse key-value pairs from extracted section
-        lines = extracted_section.strip().split('\n')
-        for line in lines:
-            if ':' in line and line.strip():
-                parts = line.split(':', 1)
-                if len(parts) == 2:
-                    key = parts[0].strip().strip('-').strip('*').strip()
-                    value = parts[1].strip()
-                    if key and value and value != "":
-                        extracted_data[key] = value
+    extracted_section = response_text.split("```json")[1]
+    extracted_section = extracted_section.split("```")[0]
+    
+    extracted_data = json.loads(extracted_section)
+    
     
     return extracted_data
 
@@ -222,8 +188,6 @@ def extract_clarification_questions(response_text: str) -> List[str]:
     
     if "QUESTIONS FOR CLARIFICATION:" in response_text:
         questions_section = response_text.split("QUESTIONS FOR CLARIFICATION:")[1]
-        if "JSON OUTPUT:" in questions_section:
-            questions_section = questions_section.split("JSON OUTPUT:")[0]
         
         lines = questions_section.strip().split('\n')
         for line in lines:
@@ -233,160 +197,6 @@ def extract_clarification_questions(response_text: str) -> List[str]:
     
     return questions
 
-def generate_final_json(extracted_data: Dict[str, Any], missing_fields: List[str]) -> str:
-    """Generate final JSON output with extracted data and null values for missing fields."""
-    # Create a structured JSON based on the system prompt template
-    json_output = {
-        "Clients": {},
-        "Project": {},
-        "Requirements": [],
-        "Constraints": [],
-        "ProjectTechnology": []
-    }
-    
-    # Map extracted data to appropriate sections
-    for key, value in extracted_data.items():
-        key_lower = key.lower()
-        
-        # Skip if this is a duplicate field (question format vs clean format)
-        if key.startswith("1.") or "**" in key or key.endswith("?"):
-            continue
-        
-        # Client information
-        if any(term in key_lower for term in ['client', 'company', 'contact', 'email', 'phone', 'location', 'industry']):
-            # Clean up the key for the JSON
-            clean_key = key.replace("Clients: ", "").replace("Client: ", "")
-            json_output["Clients"][clean_key] = value
-        # Project information
-        elif any(term in key_lower for term in ['project', 'start date', 'end date', 'budget', 'users', 'status', 'delivery']):
-            clean_key = key.replace("Project: ", "")
-            json_output["Project"][clean_key] = value
-        # Technology information
-        elif any(term in key_lower for term in ['technology', 'tech', 'system', 'platform', 'tool', 'software']):
-            json_output["ProjectTechnology"].append({
-                "TechName": key.replace("Technology: ", "").replace("Tech: ", ""),
-                "Details": value,
-                "Status": "Mentioned"
-            })
-        # Requirements
-        elif any(term in key_lower for term in ['requirement', 'feature', 'functionality', 'spec']):
-            json_output["Requirements"].append({
-                "Description": f"{key}: {value}",
-                "Status": "Identified",
-                "Source": "Communication Analysis"
-            })
-        # Constraints
-        elif any(term in key_lower for term in ['constraint', 'limitation', 'deadline', 'restriction']):
-            json_output["Constraints"].append({
-                "Description": f"{key}: {value}",
-                "Source": "Communication Analysis"
-            })
-        # General project data
-        else:
-            json_output["Project"][key] = value
-    
-    # Add null values for missing fields
-    for field in missing_fields:
-        field_lower = field.lower()
-        clean_field = extract_field_name_from_question(field)
-        
-        if any(term in field_lower for term in ['client', 'company', 'contact', 'email', 'phone', 'location', 'industry']):
-            clean_key = clean_field.replace("Clients: ", "").replace("Client: ", "")
-            if clean_key not in json_output["Clients"]:
-                json_output["Clients"][clean_key] = None
-        elif any(term in field_lower for term in ['project', 'start date', 'end date', 'budget', 'users', 'status', 'delivery']):
-            clean_key = clean_field.replace("Project: ", "")
-            if clean_key not in json_output["Project"]:
-                json_output["Project"][clean_key] = None
-        else:
-            if clean_field not in json_output["Project"]:
-                json_output["Project"][clean_field] = None
-    
-    # Clean up empty sections
-    if not json_output["Clients"]:
-        del json_output["Clients"]
-    if not json_output["Project"]:
-        del json_output["Project"]
-    if not json_output["Requirements"]:
-        del json_output["Requirements"]
-    if not json_output["Constraints"]:
-        del json_output["Constraints"]
-    if not json_output["ProjectTechnology"]:
-        del json_output["ProjectTechnology"]
-    
-    return json.dumps(json_output, indent=2)
-
-def extract_field_name_from_question(question: str) -> str:
-    """Extract a clean field name from a clarification question."""
-    # Remove common question prefixes and suffixes
-    question = question.strip()
-    
-    # Look for patterns like "What is the..." or "Please provide the..."
-    patterns = [
-        r"what is the (.+?)\?",
-        r"please provide the (.+?)\?",
-        r"could you provide the (.+?)\?",
-        r"what (.+?)\?",
-        r"clients?:\s*(.+?)\?",
-        r"project:\s*(.+?)\?",
-        r"(.+?)\?",
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, question.lower())
-        if match:
-            field_name = match.group(1).strip()
-            # Clean up the field name
-            field_name = field_name.replace("for ", "").replace("the ", "").replace("is ", "")
-            # Convert to title case
-            field_name = " ".join(word.capitalize() for word in field_name.split())
-            return field_name
-    
-    # If no pattern matches, try to extract from the question structure
-    # Look for "Clients: ContactNumber" pattern
-    if ":" in question:
-        parts = question.split(":")
-        if len(parts) >= 2:
-            section = parts[0].strip()
-            field = parts[1].strip().replace("**", "").replace("?", "").strip()
-            return f"{section}: {field}"
-    
-    # Fallback: use the question itself but clean it up
-    clean_question = question.replace("?", "").replace("**", "").strip()
-    return clean_question
-
-def clean_extracted_data(extracted_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Clean extracted data to remove duplicates and normalize field names."""
-    cleaned_data = {}
-    
-    # Group similar fields together
-    field_groups = {}
-    
-    for key, value in extracted_data.items():
-        # Skip overly long keys that look like questions
-        if len(key) > 100 or key.startswith("1.") or "**" in key:
-            continue
-        
-        # Normalize the key
-        normalized_key = key.lower().replace("clients:", "").replace("client:", "").replace("project:", "").strip()
-        
-        # Look for existing similar keys
-        found_group = False
-        for group_key in field_groups:
-            if normalized_key in group_key or group_key in normalized_key:
-                # Update with the cleaner key name
-                if len(key) < len(group_key):
-                    field_groups[key] = field_groups.pop(group_key)
-                    field_groups[key] = value
-                else:
-                    field_groups[group_key] = value
-                found_group = True
-                break
-        
-        if not found_group:
-            field_groups[key] = value
-    
-    return field_groups
 
 def main():
     st.title("🤖 RAG-Powered Trackbot")
@@ -413,6 +223,8 @@ def main():
         st.session_state.current_question_index = 0
     if "asking_clarification" not in st.session_state:
         st.session_state.asking_clarification = False
+    if "extraction_done" not in st.session_state:
+        st.session_state.extraction_done = False
     
     # Sidebar for information and settings
     with st.sidebar:
@@ -421,13 +233,13 @@ def main():
         # Show knowledge base status
         if embedding_model and vector_store:
             st.success("✅ Knowledge base loaded successfully!")
-            st.info("Ready to analyze communication dumps.")
         else:
             st.error("❌ Failed to load knowledge base")
-            st.error("Please ensure 'knowledge base.docx' exists in the app directory.")
+
         
         # Show current extraction status
         if st.session_state.extracted_data or st.session_state.missing_fields:
+            st.markdown("---")
             st.markdown("### 📊 Extraction Status")
             total_possible = len(st.session_state.extracted_data) + len(st.session_state.missing_fields)
             if total_possible > 0:
@@ -435,50 +247,43 @@ def main():
                 st.progress(completion / 100)
                 st.write(f"Completion: {completion:.1f}%")
                 st.write(f"Extracted: {len(st.session_state.extracted_data)} fields")
-                st.write(f"Missing: {len(st.session_state.missing_fields)} fields")
-                
-                # Show pending clarification questions
-                if st.session_state.clarification_questions:
-                    st.write(f"Pending questions: {len(st.session_state.clarification_questions)}")
-                    if st.session_state.asking_clarification:
-                        st.info(f"Currently asking question {st.session_state.current_question_index + 1} of {len(st.session_state.clarification_questions)}")
+                if st.session_state.extraction_done:
+                    st.write(f"Missing: 0 fields")
+                else:
+                    st.write(f"Missing: {len(st.session_state.missing_fields)} fields")
+
+                    # Show missing fields
+                    if st.session_state.missing_fields:
+                        with st.expander("❓ Missing Fields"):
+                            for field in st.session_state.missing_fields:
+                                st.write(f"- {field}")
+            
         
-        
-        # Show missing fields
-        if st.session_state.missing_fields:
-            with st.expander("❓ Missing Fields"):
-                for field in st.session_state.missing_fields:
-                    st.write(f"- {field}")
         
         # JSON Generation Button
+        if st.session_state.extracted_data or st.session_state.missing_fields:
+            if st.button("📄 Generate Final JSON"):
+                if st.session_state.extracted_data :
+                     with st.spinner("Generating JSON..."):
+                        prompt_text = f""" {Get_Json_prompt.content} {st.session_state.extracted_data}"""
+                        response = llm.invoke([HumanMessage(content=prompt_text)])
+                        response = response.content
+                        response = response.replace("```json", "").replace("```", "")
+                        print(response)
 
-        if st.button("📄 Generate Final JSON"):
-            if st.session_state.extracted_data or st.session_state.missing_fields:
-                # Clean the extracted data first
-                cleaned_data = clean_extracted_data(st.session_state.extracted_data)
-                final_json = generate_final_json(
-                    cleaned_data, 
-                    st.session_state.missing_fields
-                )
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": f"**Final JSON Output:**\n\n```json\n{final_json}\n```"
-                })
-                st.rerun()
-            else:
-                st.warning("No data extracted yet. Please analyze a communication dump first.")
+                                                                                                                        
         
-        # Clear data button
-        if st.button("🗑️ Clear All Data & Memory"):
-            st.session_state.extracted_data = {}
-            st.session_state.missing_fields = []
-            st.session_state.clarification_questions = []
-            st.session_state.current_question_index = 0
-            st.session_state.asking_clarification = False
-            st.session_state.messages = []
+            # Clear data button
+            if st.button("🗑️ Clear All Data & Memory"):
+                st.session_state.extracted_data = {}
+                st.session_state.missing_fields = []
+                st.session_state.clarification_questions = []
+                st.session_state.current_question_index = 0
+                st.session_state.asking_clarification = False
+                st.session_state.messages = []
 
-            st.success("All data and memory cleared!")
-            st.rerun()
+                st.success("All data and memory cleared!")
+                st.rerun()
         
         st.markdown("---")
         st.markdown("### ℹ️ How it works")
@@ -489,7 +294,8 @@ def main():
         4. Provide answers or say "skip" for null values
         5. Generate final JSON with all data
         """)
-    
+
+
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -505,7 +311,9 @@ def main():
     # Chat input
     input_placeholder = "Paste your communication dump here..." if not st.session_state.asking_clarification else "Provide the requested information or type 'skip' to leave as null..."
     
-    if prompt := st.chat_input(input_placeholder):
+    prompt = st.chat_input(input_placeholder)
+    if prompt:
+
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -521,8 +329,12 @@ def main():
                 
                 # Process the answer
                 with st.chat_message("assistant"):
-                    if prompt.lower().strip() in ['skip', 'null', 'n/a', 'none','no']:
-                        response = f"Noted. '{question}' will be set to null in the final JSON."
+                    null_responses = ['skip', 'null', 'n/a', 'none', 'no']
+                    normalized_prompt = prompt.strip().lower()
+
+                    # Accept null *only if* it exactly matches or is simple negation
+                    if normalized_prompt in null_responses or re.match(r"^(no|none|n/a)[\s\.,;!]*$", normalized_prompt):
+                        response = f"Noted. '{question}'= can not provide any more details Use any info you have or set it to null."
                     else:
                         response = f"Thank you! I've recorded: {question} = {prompt}"
                     
@@ -580,9 +392,12 @@ def main():
                                         clarification_msg = f"I found some new information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
                                         st.markdown(clarification_msg)
                                         st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
-
-                                    # Add main response to chat history
-                                    st.session_state.messages.append({"role": "assistant", "content": answer})
+                                        
+                                    else:
+                                        st.session_state.missing_fields = []
+                                        st.session_state.extraction_done = True
+                                        st.markdown("No further clarification needed. All data processed successfully.")
+                                        st.session_state.messages.append({"role": "assistant", "content": answer})
 
                                 except Exception as e:
                                     error_msg = f"Error processing clarification answers: {e}"
@@ -624,9 +439,9 @@ def main():
                             
 
                             # Display analysis result
-                            st.markdown(answer+"\n\n---jezae")
-                            
-                            
+                            st.markdown(answer)
+                            st.session_state.messages.append({"role": "assistant", "content": answer})
+
                             # Start clarification process if needed
                             if st.session_state.clarification_questions and not st.session_state.asking_clarification:
                                 st.session_state.asking_clarification = True
@@ -634,11 +449,8 @@ def main():
                                 clarification_msg = f"I found some information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
                                 st.markdown(clarification_msg)
                                 st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
+                                st.rerun()
 
-                            
-
-                            # Add main response to chat history
-                            st.session_state.messages.append({"role": "assistant", "content": answer})
                             
                         except Exception as e:
                             error_msg = f"Error analyzing communication dump: {e}"

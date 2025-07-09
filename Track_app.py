@@ -26,9 +26,8 @@ def load_txt(file_path):
         return ""
 
 # Load prompts from external files
-system_prompt = SystemMessage(content=load_txt("system_prompt.txt"))
-#json_instruction = load_txt("json_template.txt")
-#summary_prompt = SystemMessage(content=load_txt("summary_prompt.txt"))
+clarification_prompt = SystemMessage(content=load_txt("clarification_prompt.txt"))
+input_instruction = SystemMessage(content=load_txt("input_prompt.txt"))
 
 @st.cache_resource
 def initialize_rag_components():
@@ -104,59 +103,42 @@ def setup_rag_pipeline(vector_store, llm):
         try:
             # Prepare context from retrieved documents (knowledge base requirements)
             docs_content = "\n\n".join(doc.page_content for doc in state.get("context", []))
+            clarification_msg = state.get("clarification_msg", "")
+
+            # Include chat history in the prompt
+            chat_history = "\n".join(
+                f"{message['role'].capitalize()}: {message['content']}" for message in st.session_state.messages
+            )
             
             # Create specialized prompt for communication analysis
-            if docs_content:
-                prompt_text = f"""{system_prompt.content}
+            if docs_content and not clarification_msg:
+                prompt_text = f""" {input_instruction.content} 
+                Knowledge Base  (use this to understand what data is needed):
+                {docs_content}
 
-Knowledge Base Requirements (use this to understand what data is needed):
-{docs_content}
+                Communication Dump to Analyze:
+                {state["question"]}"""
+            elif docs_content and clarification_msg:
+                prompt_text = f""" {clarification_prompt.content} 
+                Knowledge Base  (use this to understand what data is needed):
+                {docs_content}
 
-Communication Dump to Analyze:
-{state["question"]}
+                Here is the chat history between the user and the AI:
+                {state["question"]}
 
-Please analyze the communication dump and:
-1. Extract all available information that matches the knowledge base requirements
-2. Identify any missing required information
-3. If information is missing, ask specific questions to obtain it
-4. Format your response clearly with these sections:
+                Analysis: """
+            elif clarification_msg:
+                prompt_text = f""" {clarification_prompt.content} 
+                Communication Dump to Analyze:
+                Here is the chat history between the user and the AI:
+                {state["question"]}
 
-EXTRACTED DATA:
-[List all information found in key: value format]
-
-MISSING DATA:
-[List specific fields/information still needed]
-
-QUESTIONS FOR CLARIFICATION:
-[Specific questions to ask the user to get missing information]
-
-Analysis:"""
+                Analysis: """
             else:
-                prompt_text = f"""{system_prompt.content}
+                prompt_text = f""" {input_instruction.content} 
+                Communication Dump to Analyze:
+                {state["question"]}"""
 
-Communication Dump to Analyze:
-{state["question"]}
-
-Please analyze the communication dump and extract key structured information:
-- Key participants and their roles
-- Important dates and times
-- Action items or decisions
-- Contact information
-- Project details
-- Requirements and specifications
-- Any other structured data present
-
-Format your response with:
-EXTRACTED DATA:
-[key: value pairs of found information]
-
-MISSING DATA:
-[any standard fields that appear to be missing]
-
-QUESTIONS FOR CLARIFICATION:
-[questions to get more complete information]
-
-Analysis:"""
 
             # Get response from LLM
             response = llm.invoke([HumanMessage(content=prompt_text)])
@@ -407,7 +389,7 @@ def clean_extracted_data(extracted_data: Dict[str, Any]) -> Dict[str, Any]:
     return field_groups
 
 def main():
-    st.title("🤖 Communication Analysis & JSON Generator")
+    st.title("🤖 RAG-Powered Trackbot")
     st.markdown("Analyze communication dumps to extract structured information and generate JSON output!")
     
     # Initialize components
@@ -434,7 +416,7 @@ def main():
     
     # Sidebar for information and settings
     with st.sidebar:
-        st.header("📋 JSON Requirements")
+        st.header("📋 Information panel")
         
         # Show knowledge base status
         if embedding_model and vector_store:
@@ -461,11 +443,6 @@ def main():
                     if st.session_state.asking_clarification:
                         st.info(f"Currently asking question {st.session_state.current_question_index + 1} of {len(st.session_state.clarification_questions)}")
         
-        # Show extracted data preview
-        if st.session_state.extracted_data:
-            with st.expander("📋 Current Extracted Data"):
-                for key, value in st.session_state.extracted_data.items():
-                    st.write(f"**{key}:** {value}")
         
         # Show missing fields
         if st.session_state.missing_fields:
@@ -474,6 +451,7 @@ def main():
                     st.write(f"- {field}")
         
         # JSON Generation Button
+
         if st.button("📄 Generate Final JSON"):
             if st.session_state.extracted_data or st.session_state.missing_fields:
                 # Clean the extracted data first
@@ -498,6 +476,7 @@ def main():
             st.session_state.current_question_index = 0
             st.session_state.asking_clarification = False
             st.session_state.messages = []
+
             st.success("All data and memory cleared!")
             st.rerun()
         
@@ -542,20 +521,11 @@ def main():
                 
                 # Process the answer
                 with st.chat_message("assistant"):
-                    if prompt.lower().strip() in ['skip', 'null', 'n/a', 'none']:
-                        # Extract clean field name from question
-                        clean_field_name = extract_field_name_from_question(question)
-                        st.session_state.extracted_data[clean_field_name] = None
-                        response = f"Noted. '{clean_field_name}' will be set to null in the final JSON."
+                    if prompt.lower().strip() in ['skip', 'null', 'n/a', 'none','no']:
+                        response = f"Noted. '{question}' will be set to null in the final JSON."
                     else:
-                        # Extract clean field name from question
-                        clean_field_name = extract_field_name_from_question(question)
-                        st.session_state.extracted_data[clean_field_name] = prompt
-                        response = f"Thank you! I've recorded: {clean_field_name} = {prompt}"
+                        response = f"Thank you! I've recorded: {question} = {prompt}"
                     
-                    # Remove the question from missing fields
-                    if question in st.session_state.missing_fields:
-                        st.session_state.missing_fields.remove(question)
                     
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
@@ -565,17 +535,64 @@ def main():
                 
                 # Check if all questions are answered
                 if st.session_state.current_question_index >= len(st.session_state.clarification_questions):
-                    st.session_state.asking_clarification = False
                     st.session_state.current_question_index = 0
-                    st.session_state.clarification_questions = []  # Clear answered questions
-                    completion_msg = "All clarification questions completed! You can now generate the final JSON using the button in the sidebar, or provide additional communication dumps to extract more information."
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": completion_msg
-                    })
-                    st.markdown(completion_msg)
-                
+                    st.session_state.asking_clarification = False
+                    st.session_state.clarification_questions = []
+                    st.session_state.missing_fields = []
+
+                    rag_graph = setup_rag_pipeline(vector_store, llm)
+
+                    if rag_graph:
+                        with st.chat_message("assistant"):
+                            with st.spinner("Processing clarification answers..."):
+                                try:
+                                    # Include chat history in the prompt
+                                    chat_history = "\n".join(
+                                        f"{message['role'].capitalize()}: {message['content']}" for message in st.session_state.messages
+                                    )
+                                    # Run RAG pipeline with clarification answers
+                                    result = rag_graph.invoke({"question": chat_history})
+                                    answer = result.get("answer", "Sorry, I couldn't process the clarification answers.")
+
+                                    # Update session state with new extracted information
+                                    new_extracted_data = result.get("extracted_data", {})
+                                    st.session_state.extracted_data.update(new_extracted_data)
+
+                                    # Add new missing fields (avoid duplicates)
+                                    new_missing_fields = result.get("missing_fields", [])
+                                    for field in new_missing_fields:
+                                        if field not in st.session_state.missing_fields and field not in st.session_state.extracted_data:
+                                            st.session_state.missing_fields.append(field)
+
+                                    # Add new clarification questions (avoid duplicates)
+                                    new_clarification_questions = result.get("clarification_questions", [])
+                                    for question in new_clarification_questions:
+                                        if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
+                                            st.session_state.clarification_questions.append(question)
+
+                                    # Display analysis result
+                                    st.markdown(answer)
+
+                                    # Restart clarification process if needed
+                                    if st.session_state.clarification_questions:
+                                        st.session_state.asking_clarification = True
+                                        st.session_state.current_question_index = 0
+                                        clarification_msg = f"I found some new information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
+                                        st.markdown(clarification_msg)
+                                        st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
+
+                                    # Add main response to chat history
+                                    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+                                except Exception as e:
+                                    error_msg = f"Error processing clarification answers: {e}"
+                                    st.error(error_msg)
+                                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                    else:
+                        st.error("Failed to set up analysis pipeline.")
+
                 st.rerun()
+
         
         else:
             # Process communication dump
@@ -605,14 +622,10 @@ def main():
                                 if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
                                     st.session_state.clarification_questions.append(question)
                             
+
                             # Display analysis result
-                            st.markdown(answer)
+                            st.markdown(answer+"\n\n---jezae")
                             
-                            # Show extracted data summary
-                            if st.session_state.extracted_data:
-                                with st.expander("📊 Extracted Data Summary"):
-                                    for key, value in st.session_state.extracted_data.items():
-                                        st.write(f"**{key}:** {value}")
                             
                             # Start clarification process if needed
                             if st.session_state.clarification_questions and not st.session_state.asking_clarification:
@@ -621,7 +634,9 @@ def main():
                                 clarification_msg = f"I found some information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
                                 st.markdown(clarification_msg)
                                 st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
+
                             
+
                             # Add main response to chat history
                             st.session_state.messages.append({"role": "assistant", "content": answer})
                             

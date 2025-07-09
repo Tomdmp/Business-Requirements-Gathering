@@ -13,7 +13,7 @@ langgraph>=0.0.40
 
 # Vector store and embeddings
 faiss-cpu>=1.7.4
-sentence-transformers>=2.2.0
+sentence-transformers>=2.2.2
 
 # Document processing
 unstructured[docx]>=0.10.0

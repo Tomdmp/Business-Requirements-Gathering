@@ -30,6 +30,7 @@ def load_txt(file_path):
 clarification_prompt = SystemMessage(content=load_txt("clarification_prompt.txt"))
 input_instruction = SystemMessage(content=load_txt("input_prompt.txt"))
 Get_Json_prompt = SystemMessage(content=load_txt("Get_Json_prompt.txt"))
+user_stories_prompt = SystemMessage(content=load_txt("user_stories_prompt.txt"))
 
 @st.cache_resource
 def initialize_rag_components():
@@ -227,6 +228,18 @@ def main():
         st.session_state.asking_clarification = False
     if "extraction_done" not in st.session_state:
         st.session_state.extraction_done = False
+
+    # Generate User Stories 
+    if st.session_state.extracted_data or st.session_state.missing_fields:
+        if st.button("Generate User Stories"):
+            if st.session_state.extracted_data :
+                with st.spinner("Generating User Stories..."):
+                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
+                        response = llm.invoke([HumanMessage(content=prompt_text)])
+                        response = response.content
+                        st.markdown("### 🧾 Generated User Stories")
+                        st.code(response, language="markdown")
+
     
     # Sidebar for information and settings
     with st.sidebar:
@@ -237,6 +250,9 @@ def main():
             st.success("✅ Knowledge base loaded successfully!")
         else:
             st.error("❌ Failed to load knowledge base")
+
+        
+
 
         
         # Show current extraction status
@@ -278,6 +294,8 @@ def main():
                         else:
                             st.error(f"{ans}", icon="❌")
                             
+
+ 
 
                                                                                                                         
         

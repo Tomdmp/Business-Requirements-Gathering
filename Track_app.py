@@ -31,6 +31,9 @@ clarification_prompt = SystemMessage(content=load_txt("clarification_prompt.txt"
 input_instruction = SystemMessage(content=load_txt("input_prompt.txt"))
 Get_Json_prompt = SystemMessage(content=load_txt("Get_Json_prompt.txt"))
 user_stories_prompt = SystemMessage(content=load_txt("user_stories_prompt.txt"))
+business_rules = SystemMessage(content=load_txt("business_rules.txt"))
+functional_requirements = SystemMessage(content=load_txt("functional_requirements.txt"))
+Project_Inception_Brief = SystemMessage(content=load_txt("Project_Inception_Brief.txt"))
 
 @st.cache_resource
 def initialize_rag_components():
@@ -216,6 +219,8 @@ def main():
     # Initialize session state for data tracking
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "additional_features_messages" not in st.session_state:
+        st.session_state.additional_features_messages = []
     if "extracted_data" not in st.session_state:
         st.session_state.extracted_data = {}
     if "missing_fields" not in st.session_state:
@@ -228,17 +233,8 @@ def main():
         st.session_state.asking_clarification = False
     if "extraction_done" not in st.session_state:
         st.session_state.extraction_done = False
-
-    # Generate User Stories 
-    if st.session_state.extracted_data or st.session_state.missing_fields:
-        if st.button("Generate User Stories"):
-            if st.session_state.extracted_data :
-                with st.spinner("Generating User Stories..."):
-                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
-                        response = llm.invoke([HumanMessage(content=prompt_text)])
-                        response = response.content
-                        st.markdown("### 🧾 Generated User Stories")
-                        st.code(response, language="markdown")
+    if "additional_features" not in st.session_state:
+        st.session_state.additional_features = False
 
     
     # Sidebar for information and settings
@@ -278,9 +274,9 @@ def main():
             
         
         
-        # JSON Generation Button
+        # semi-hidden section for additional features
         if st.session_state.extracted_data or st.session_state.missing_fields:
-            if st.button("📄 Generate Final JSON"):
+            if st.button("📄 Save JSON To DB"):
                 if st.session_state.extracted_data :
                      with st.spinner("Generating JSON..."):
                         prompt_text = f""" {Get_Json_prompt.content} {st.session_state.extracted_data}"""
@@ -296,7 +292,8 @@ def main():
                             
 
  
-
+            if st.button("🔄 Usable documentation"):
+                st.session_state.additional_features = not st.session_state.additional_features
                                                                                                                         
         
             # Clear data button
@@ -321,172 +318,228 @@ def main():
         5. Generate final JSON with all data
         """)
 
+    if st.session_state.additional_features:
+        for message in st.session_state.additional_features_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+            st.markdown("---")
 
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    
-    # Handle clarification questions
-    if st.session_state.asking_clarification and st.session_state.clarification_questions:
-        current_idx = st.session_state.current_question_index
-        if current_idx < len(st.session_state.clarification_questions):
-            question = st.session_state.clarification_questions[current_idx]
-            st.info(f"Question {current_idx + 1} of {len(st.session_state.clarification_questions)}: {question}")
-    
-    # Chat input
-    input_placeholder = "Paste your communication dump here..." if not st.session_state.asking_clarification else "Provide the requested information or type 'skip' to leave as null..."
-    
-    prompt = st.chat_input(input_placeholder)
-    if prompt:
 
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        text = "Options to generate additional documents based on extracted data"
+        st.markdown(f"<h5 style='text-align:center'>{text}</h5>", unsafe_allow_html=True)
+        st.markdown("---")
+        col1, col2, col3, col4, = st.columns(4)
+
+        with col1:
+            # Generate User Stories 
+            if st.button("Generate User Stories"):
+                with st.spinner("Generating User Stories..."):
+                    prompt_text = f""" {user_stories_prompt.content} Json File with infomation: 
+                    {st.session_state.extracted_data}"""
+                    response = llm.invoke([HumanMessage(content=prompt_text)])
+                    response = response.content
+                    st.session_state.additional_features_messages.append({"role": "assistant","content": response})
+                    st.rerun()
+        with col2:
+            # Generate business rules
+            if st.button("Generate Business Rules"):
+                with st.spinner("Generating Business Rules..."):
+                    prompt_text = f""" {business_rules.content} Json File with infomation:
+                    {st.session_state.extracted_data}"""
+                    response = llm.invoke([HumanMessage(content=prompt_text)])
+                    response = response.content
+                    st.session_state.additional_features_messages.append({"role": "assistant","content": response})
+                    st.rerun()
+
+        with col3:
+            # Generate Functional Requirements 
+            if st.button("Generate Functional Requirements"):
+                with st.spinner("Generating Functional Requirements..."):
+                    prompt_text = f""" {functional_requirements.content} Json File with infomation:
+                    {st.session_state.extracted_data}"""
+                    response = llm.invoke([HumanMessage(content=prompt_text)])
+                    response = response.content
+                    st.session_state.additional_features_messages.append({"role": "assistant","content": response})
+                    st.rerun()
+
+        with col4:
+            # Generate Project Inception Brief
+            if st.button("Generate Project Inception Brief"):
+                with st.spinner("Generating Project Inception Brief..."):
+                    prompt_text = f""" {Project_Inception_Brief.content} Json File with infomation:
+                    {st.session_state.extracted_data}"""
+                    response = llm.invoke([HumanMessage(content=prompt_text)])
+                    response = response.content
+                    st.session_state.additional_features_messages.append({"role": "assistant","content": response})
+                    st.rerun()
+
+
+    else:
+        # Display chat history
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
         
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        # Handle clarification responses
+        # Handle clarification questions
         if st.session_state.asking_clarification and st.session_state.clarification_questions:
             current_idx = st.session_state.current_question_index
             if current_idx < len(st.session_state.clarification_questions):
                 question = st.session_state.clarification_questions[current_idx]
-                
-                # Process the answer
-                with st.chat_message("assistant"):
-                    null_responses = ['skip', 'null', 'n/a', 'none', 'no']
-                    normalized_prompt = prompt.strip().lower()
-
-                    # Accept null *only if* it exactly matches or is simple negation
-                    if normalized_prompt in null_responses or re.match(r"^(no|none|n/a)[\s\.,;!]*$", normalized_prompt):
-                        response = f"Noted. '{question}'= can not provide any more details Use any info you have or set it to null."
-                    else:
-                        response = f"Thank you! I've recorded: {question} = {prompt}"
-                    
-                    
-                    st.markdown(response)
-                    st.session_state.messages.append({"role": "assistant", "content": response})
-                
-                # Move to next question
-                st.session_state.current_question_index += 1
-                
-                # Check if all questions are answered
-                if st.session_state.current_question_index >= len(st.session_state.clarification_questions):
-                    st.session_state.current_question_index = 0
-                    st.session_state.asking_clarification = False
-                    st.session_state.clarification_questions = []
-                    st.session_state.missing_fields = []
-
-                    rag_graph = setup_rag_pipeline(vector_store, llm)
-
-                    if rag_graph:
-                        with st.chat_message("assistant"):
-                            with st.spinner("Processing clarification answers..."):
-                                try:
-                                    # Include chat history in the prompt
-                                    chat_history = "\n".join(
-                                        f"{message['role'].capitalize()}: {message['content']}" for message in st.session_state.messages
-                                    )
-                                    # Run RAG pipeline with clarification answers
-                                    result = rag_graph.invoke({"question": chat_history})
-                                    answer = result.get("answer", "Sorry, I couldn't process the clarification answers.")
-
-                                    # Update session state with new extracted information
-                                    new_extracted_data = result.get("extracted_data", {})
-                                    st.session_state.extracted_data.update(new_extracted_data)
-
-                                    # Add new missing fields (avoid duplicates)
-                                    new_missing_fields = result.get("missing_fields", [])
-                                    for field in new_missing_fields:
-                                        if field not in st.session_state.missing_fields and field not in st.session_state.extracted_data:
-                                            st.session_state.missing_fields.append(field)
-
-                                    # Add new clarification questions (avoid duplicates)
-                                    new_clarification_questions = result.get("clarification_questions", [])
-                                    for question in new_clarification_questions:
-                                        if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
-                                            st.session_state.clarification_questions.append(question)
-
-                                    # Display analysis result
-                                    st.markdown(answer)
-
-                                    # Restart clarification process if needed
-                                    if st.session_state.clarification_questions:
-                                        st.session_state.asking_clarification = True
-                                        st.session_state.current_question_index = 0
-                                        clarification_msg = f"I found some new information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
-                                        st.markdown(clarification_msg)
-                                        st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
-                                        
-                                    else:
-                                        st.session_state.missing_fields = []
-                                        st.session_state.extraction_done = True
-                                        st.markdown("No further clarification needed. All data processed successfully.")
-                                        st.session_state.messages.append({"role": "assistant", "content": answer})
-
-                                except Exception as e:
-                                    error_msg = f"Error processing clarification answers: {e}"
-                                    st.error(error_msg)
-                                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
-                    else:
-                        st.error("Failed to set up analysis pipeline.")
-
-                st.rerun()
-
+                st.info(f"Question {current_idx + 1} of {len(st.session_state.clarification_questions)}: {question}")
         
-        else:
-            # Process communication dump
-            rag_graph = setup_rag_pipeline(vector_store, llm)
+        # Chat input
+        input_placeholder = "Paste your communication dump here..." if not st.session_state.asking_clarification else "Provide the requested information or type 'skip' to leave as null..."
+        
+        prompt = st.chat_input(input_placeholder)
+        if prompt:
+
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
             
-            if rag_graph:
-                with st.chat_message("assistant"):
-                    with st.spinner("Analyzing communication dump..."):
-                        try:
-                            # Run RAG pipeline
-                            result = rag_graph.invoke({"question": prompt})
-                            answer = result.get("answer", "Sorry, I couldn't analyze the communication dump.")
-                            
-                            # Update session state with extracted information (append, don't replace)
-                            new_extracted_data = result.get("extracted_data", {})
-                            st.session_state.extracted_data.update(new_extracted_data)
-                            
-                            # Add new missing fields (avoid duplicates)
-                            new_missing_fields = result.get("missing_fields", [])
-                            for field in new_missing_fields:
-                                if field not in st.session_state.missing_fields and field not in st.session_state.extracted_data:
-                                    st.session_state.missing_fields.append(field)
-                            
-                            # Add new clarification questions (avoid duplicates)
-                            new_clarification_questions = result.get("clarification_questions", [])
-                            for question in new_clarification_questions:
-                                if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
-                                    st.session_state.clarification_questions.append(question)
-                            
+            # Display user message
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # Handle clarification responses
+            if st.session_state.asking_clarification and st.session_state.clarification_questions:
+                current_idx = st.session_state.current_question_index
+                if current_idx < len(st.session_state.clarification_questions):
+                    question = st.session_state.clarification_questions[current_idx]
+                    
+                    # Process the answer
+                    with st.chat_message("assistant"):
+                        null_responses = ['skip', 'null', 'n/a', 'none', 'no']
+                        normalized_prompt = prompt.strip().lower()
 
-                            # Display analysis result
-                            st.markdown(answer)
-                            st.session_state.messages.append({"role": "assistant", "content": answer})
+                        # Accept null *only if* it exactly matches or is simple negation
+                        if normalized_prompt in null_responses or re.match(r"^(no|none|n/a)[\s\.,;!]*$", normalized_prompt):
+                            response = f"Noted. '{question}'= can not provide any more details Use any info you have or set it to null."
+                        else:
+                            response = f"Thank you! I've recorded: {question} = {prompt}"
+                        
+                        
+                        st.markdown(response)
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                    
+                    # Move to next question
+                    st.session_state.current_question_index += 1
+                    
+                    # Check if all questions are answered
+                    if st.session_state.current_question_index >= len(st.session_state.clarification_questions):
+                        st.session_state.current_question_index = 0
+                        st.session_state.asking_clarification = False
+                        st.session_state.clarification_questions = []
+                        st.session_state.missing_fields = []
 
-                            # Start clarification process if needed
-                            if st.session_state.clarification_questions and not st.session_state.asking_clarification:
-                                st.session_state.asking_clarification = True
-                                st.session_state.current_question_index = 0
-                                clarification_msg = f"I found some information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
-                                st.markdown(clarification_msg)
-                                st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
-                                st.rerun()
+                        rag_graph = setup_rag_pipeline(vector_store, llm)
 
-                            
-                        except Exception as e:
-                            error_msg = f"Error analyzing communication dump: {e}"
-                            st.error(error_msg)
-                            st.session_state.messages.append({
-                                "role": "assistant", 
-                                "content": error_msg
-                            })
+                        if rag_graph:
+                            with st.chat_message("assistant"):
+                                with st.spinner("Processing clarification answers..."):
+                                    try:
+                                        # Include chat history in the prompt
+                                        chat_history = "\n".join(
+                                            f"{message['role'].capitalize()}: {message['content']}" for message in st.session_state.messages
+                                        )
+                                        # Run RAG pipeline with clarification answers
+                                        result = rag_graph.invoke({"question": chat_history})
+                                        answer = result.get("answer", "Sorry, I couldn't process the clarification answers.")
+
+                                        # Update session state with new extracted information
+                                        new_extracted_data = result.get("extracted_data", {})
+                                        st.session_state.extracted_data.update(new_extracted_data)
+
+                                        # Add new missing fields (avoid duplicates)
+                                        new_missing_fields = result.get("missing_fields", [])
+                                        for field in new_missing_fields:
+                                            if field not in st.session_state.missing_fields and field not in st.session_state.extracted_data:
+                                                st.session_state.missing_fields.append(field)
+
+                                        # Add new clarification questions (avoid duplicates)
+                                        new_clarification_questions = result.get("clarification_questions", [])
+                                        for question in new_clarification_questions:
+                                            if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
+                                                st.session_state.clarification_questions.append(question)
+
+                                        # Display analysis result
+                                        st.markdown(answer)
+
+                                        # Restart clarification process if needed
+                                        if st.session_state.clarification_questions:
+                                            st.session_state.asking_clarification = True
+                                            st.session_state.current_question_index = 0
+                                            clarification_msg = f"I found some new information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
+                                            st.markdown(clarification_msg)
+                                            st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
+                                            
+                                        else:
+                                            st.session_state.missing_fields = []
+                                            st.session_state.extraction_done = True
+                                            st.markdown("No further clarification needed. All data processed successfully.")
+                                            st.session_state.messages.append({"role": "assistant", "content": answer})
+
+                                    except Exception as e:
+                                        error_msg = f"Error processing clarification answers: {e}"
+                                        st.error(error_msg)
+                                        st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                        else:
+                            st.error("Failed to set up analysis pipeline.")
+
+                    st.rerun()
+
+            
             else:
-                st.error("Failed to set up analysis pipeline.")
+                # Process communication dump
+                rag_graph = setup_rag_pipeline(vector_store, llm)
+                
+                if rag_graph:
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analyzing communication dump..."):
+                            try:
+                                # Run RAG pipeline
+                                result = rag_graph.invoke({"question": prompt})
+                                answer = result.get("answer", "Sorry, I couldn't analyze the communication dump.")
+                                
+                                # Update session state with extracted information (append, don't replace)
+                                new_extracted_data = result.get("extracted_data", {})
+                                st.session_state.extracted_data.update(new_extracted_data)
+                                
+                                # Add new missing fields (avoid duplicates)
+                                new_missing_fields = result.get("missing_fields", [])
+                                for field in new_missing_fields:
+                                    if field not in st.session_state.missing_fields and field not in st.session_state.extracted_data:
+                                        st.session_state.missing_fields.append(field)
+                                
+                                # Add new clarification questions (avoid duplicates)
+                                new_clarification_questions = result.get("clarification_questions", [])
+                                for question in new_clarification_questions:
+                                    if question not in st.session_state.clarification_questions and question not in st.session_state.extracted_data:
+                                        st.session_state.clarification_questions.append(question)
+                                
+
+                                # Display analysis result
+                                st.markdown(answer)
+                                st.session_state.messages.append({"role": "assistant", "content": answer})
+
+                                # Start clarification process if needed
+                                if st.session_state.clarification_questions and not st.session_state.asking_clarification:
+                                    st.session_state.asking_clarification = True
+                                    st.session_state.current_question_index = 0
+                                    clarification_msg = f"I found some information but need clarification on {len(st.session_state.clarification_questions)} items. I'll ask you one by one:"
+                                    st.markdown(clarification_msg)
+                                    st.session_state.messages.append({"role": "assistant", "content": clarification_msg})
+                                    st.rerun()
+
+                                
+                            except Exception as e:
+                                error_msg = f"Error analyzing communication dump: {e}"
+                                st.error(error_msg)
+                                st.session_state.messages.append({
+                                    "role": "assistant", 
+                                    "content": error_msg
+                                })
+                else:
+                    st.error("Failed to set up analysis pipeline.")
 
 if __name__ == "__main__":
     main()

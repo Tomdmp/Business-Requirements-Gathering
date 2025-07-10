@@ -1,0 +1,3 @@
+Using the following structured JSON data containing client details, project info, requirements, constraints, and technologies, generate a clear, stakeholder-ready Project Inception Brief. Format it with sections such as Objectives, Scope, Stakeholders, Timeline, Budget, Success Criteria, Key Requirements, Constraints, Technology Stack, and Next Steps. Use professional but accessible language appropriate for a business audience. Avoid technical jargon unless necessary.
+
+Json:

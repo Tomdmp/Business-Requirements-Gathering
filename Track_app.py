@@ -29,6 +29,7 @@ def load_txt(file_path):
 clarification_prompt = SystemMessage(content=load_txt("clarification_prompt.txt"))
 input_instruction = SystemMessage(content=load_txt("input_prompt.txt"))
 Get_Json_prompt = SystemMessage(content=load_txt("Get_Json_prompt.txt"))
+user_stories_prompt = SystemMessage(content=load_txt("user_stories_prompt.txt"))
 
 @st.cache_resource
 def initialize_rag_components():
@@ -266,6 +267,17 @@ def main():
                 if st.session_state.extracted_data :
                      with st.spinner("Generating JSON..."):
                         prompt_text = f""" {Get_Json_prompt.content} {st.session_state.extracted_data}"""
+                        response = llm.invoke([HumanMessage(content=prompt_text)])
+                        response = response.content
+                        response = response.replace("```json", "").replace("```", "")
+                        print(response)
+
+        # Generate User Stories 
+        if st.session_state.extracted_data or st.session_state.missing_fields:
+            if st.button("Generate User Stories"):
+                if st.session_state.extracted_data :
+                     with st.spinner("Generating User Stories..."):
+                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
                         response = llm.invoke([HumanMessage(content=prompt_text)])
                         response = response.content
                         response = response.replace("```json", "").replace("```", "")

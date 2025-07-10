@@ -280,8 +280,9 @@ def main():
                         prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
                         response = llm.invoke([HumanMessage(content=prompt_text)])
                         response = response.content
-                        response = response.replace("```json", "").replace("```", "")
-                        print(response)
+                        st.markdown("### 🧾 Generated User Stories")
+                        st.code(response, language="markdown")
+
 
                                                                                                                         
         

@@ -1,0 +1,95 @@
+{
+  "Clients": {
+      "ClientName": "Acme Corp",
+      "ContactEmail": "contact@acme.com",
+      "ContactNumber": "+44 1234 567890",
+      "Location": "London, UK",
+      "IndustryID": "Financial Services"
+  },
+  "Project": {
+      "ProjectName": "Real-Time Sales Dashboard",
+      "StartDate": "2025-07-01",
+      "EndDate": "2025-12-01",
+      "NumUsers": 150,
+      "ProjectStatus": "Proposed",
+      "Budget": 80000,
+      "DeliveryModel": "Cloud"
+  },
+  "Requirements": [
+  {
+    "InteractionID": {
+             "Timestamp": "2025-06-26T10:00:00",
+             "SourceTypeID": "Email",
+             "RawText": "[Full transcript here]",
+             "ExtractedSummary": "Client wants cloud-based BI dashboard integrated with Salesforce."},
+    "Type": "Functional",
+    "Description": "Dashboards must display live sales data from Salesforce.",
+    "Status": "Confirmed",
+    "PriorityType": "Must",
+    "RequirementCategoryID": "Data & Analytics"
+  },
+  {
+    "InteractionID": {
+             "Timestamp": "2025-03-14T15:30:00",
+             "SourceTypeID": "Teams Call",
+             "RawText": "[Full transcript here]",
+             "ExtractedSummary": "Client is exploring edge computing infrastructure to optimize factory sensor analytics."},
+    "Type": "Non-functional",
+    "Description": "Business users should be able to edit visualisations without IT help.",
+    "Status": "In Review",
+    "PriorityType": "Should",
+    "RequirementCategoryID": "Data & Analytics"
+  }
+  ],
+  "Constraints": [
+  {
+    "ConstraintTypeID": "Budget",
+    "Description": "Must stay within £80,000 allocated capital.",
+    "Severity": "High",
+    "InteractionID": {
+             "Timestamp": "2025-03-09T11:00:00",
+             "SourceTypeID": "In-person",
+             "RawText": "[Full transcript here]",
+             "ExtractedSummary": "Client proposes a smart ticketing system using QR codes and IoT-enabled kiosks."}
+
+  },
+  {
+    "ConstraintTypeID": "Timeframe",
+    "Description": "Project must be completed by end of Q4.",
+    "Severity": "Medium",
+    "InteractionID": {
+             "Timestamp": "2025-08-17T12:30:00",
+             "SourceTypeID": "Phone call",
+             "RawText": "[Full transcript here]",
+             "ExtractedSummary": "Client requires multilingual chatbot solution trained on existing Zendesk ticket archive."}
+  }
+  ],
+  "ProjectTechnology": [
+    {
+      "TechName": "Salesforce",
+      "Status": "Existing",
+      "Category": "CRM"
+    },
+    {
+      "TechName": "Excel",
+      "Status": "Existing",
+      "Category": "BI"
+    },
+      {
+      "TechName": "Google Looker",
+      "Status": "Planned",
+      "Category": "BI"
+    },
+    {
+      "TechName": "Tableau",
+      "Status": "Planned",
+      "Category": "BI"
+    },
+    {
+      "TechName": "Power BI",
+      "Status": "To Be Replaced",
+      "Category": "BI"
+    }
+  ]
+
+}

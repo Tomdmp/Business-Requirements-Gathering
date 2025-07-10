@@ -237,6 +237,18 @@ def main():
         else:
             st.error("❌ Failed to load knowledge base")
 
+        # Generate User Stories 
+        if st.session_state.extracted_data or st.session_state.missing_fields:
+            if st.button("Generate User Stories"):
+                if st.session_state.extracted_data :
+                    with st.spinner("Generating User Stories..."):
+                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
+                        response = llm.invoke([HumanMessage(content=prompt_text)])
+                        response = response.content
+                        st.markdown("### 🧾 Generated User Stories")
+                        st.code(response, language="markdown")
+
+
         
         # Show current extraction status
         if st.session_state.extracted_data or st.session_state.missing_fields:
@@ -272,17 +284,7 @@ def main():
                         response = response.replace("```json", "").replace("```", "")
                         print(response)
 
- # Generate User Stories 
-    if st.session_state.extracted_data or st.session_state.missing_fields:
-        if st.button("Generate User Stories"):
-            if st.session_state.extracted_data :
-                    with st.spinner("Generating User Stories..."):
-                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
-                        response = llm.invoke([HumanMessage(content=prompt_text)])
-                        response = response.content
-                        st.markdown("### 🧾 Generated User Stories")
-                        st.code(response, language="markdown")
-
+ 
 
                                                                                                                         
         

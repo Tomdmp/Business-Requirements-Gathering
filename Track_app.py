@@ -226,6 +226,18 @@ def main():
         st.session_state.asking_clarification = False
     if "extraction_done" not in st.session_state:
         st.session_state.extraction_done = False
+
+    # Generate User Stories 
+    if st.session_state.extracted_data or st.session_state.missing_fields:
+        if st.button("Generate User Stories"):
+            if st.session_state.extracted_data :
+                with st.spinner("Generating User Stories..."):
+                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
+                        response = llm.invoke([HumanMessage(content=prompt_text)])
+                        response = response.content
+                        st.markdown("### 🧾 Generated User Stories")
+                        st.code(response, language="markdown")
+
     
     # Sidebar for information and settings
     with st.sidebar:
@@ -237,16 +249,7 @@ def main():
         else:
             st.error("❌ Failed to load knowledge base")
 
-        # Generate User Stories 
-        if st.session_state.extracted_data or st.session_state.missing_fields:
-            if st.button("Generate User Stories"):
-                if st.session_state.extracted_data :
-                    with st.spinner("Generating User Stories..."):
-                        prompt_text = f""" {user_stories_prompt.content} {st.session_state.extracted_data}"""
-                        response = llm.invoke([HumanMessage(content=prompt_text)])
-                        response = response.content
-                        st.markdown("### 🧾 Generated User Stories")
-                        st.code(response, language="markdown")
+        
 
 
         

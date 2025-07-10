@@ -5,6 +5,176 @@ from datetime import datetime
 import json
 
 
+def create_database():
+
+  if not os.path.exists('my_DB.db'):
+  
+    # Connect to the SQLite database
+    database_path = 'my_DB.db'
+    conn = sqlite3.connect(database_path)
+    cursor = conn.cursor()
+
+    # Create a table named 'industry'
+    cursor.execute('''
+    CREATE TABLE Industry (
+        IndustryID INTEGER PRIMARY KEY,
+        IndustryName VARCHAR(100) UNIQUE)
+    ''')
+
+    # Create a table named 'client'
+    cursor.execute('''
+    CREATE TABLE Clients (
+        ClientID INTEGER PRIMARY KEY,
+        ClientName VARCHAR(100) UNIQUE,
+        ContactEmail VARCHAR(50),
+        ContactNumber VARCHAR(20),
+        Location VARCHAR(50),
+        IndustryID INTEGER,
+        FOREIGN KEY (IndustryID) REFERENCES Industry(IndustryID))
+        
+    ''')
+
+    # Create a table named 'project'
+    cursor.execute('''
+    CREATE TABLE Project (
+        ProjectID INTEGER PRIMARY KEY,
+        ClientID INTEGER,
+        ProjectName VARCHAR(100),
+        StartDate DATE,
+        EndDate DATE,
+        NumUsers INTEGER,
+        ProjectStatus CHAR(10),
+        Budget FLOAT,
+        DeliveryModel VARCHAR(10),
+        FOREIGN KEY (ClientID) REFERENCES Clients(ClientID))
+    ''')
+
+    # Create a table named 'TechnologyStack'
+    cursor.execute('''
+    CREATE TABLE TechnologyStack (
+        TechID INTEGER PRIMARY KEY,
+        TechName VARCHAR(100),
+        Category VARCHAR(100)
+        )
+    ''')
+
+    # Create a table named 'ProjectTechnology'
+    cursor.execute('''
+    CREATE TABLE ProjectTechnology (
+        ProjectID INTEGER,
+        TechID INTEGER,
+        Status VARCHAR(15),
+        PRIMARY KEY (ProjectID, TechID),
+        FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID),
+        FOREIGN KEY (TechID) REFERENCES TechnologyStack(TechID))
+    ''')
+
+    # Create a lookup table named 'SourceType'
+    cursor.execute('''
+    CREATE TABLE SourceType (
+        SourceTypeID INTEGER PRIMARY KEY,
+        SourceTypeName VARCHAR(50) UNIQUE)
+    ''')
+
+    # Create a table named 'InteractionLog'
+    cursor.execute('''
+    CREATE TABLE InteractionLog (
+        InteractionID INTEGER PRIMARY KEY,
+        Timestamp DATETIME,
+        SourceTypeID INTEGER,
+        RawText VARCHAR,
+        ExtractedSummary VARCHAR,
+        FOREIGN KEY (SourceTypeID) REFERENCES SourceType(SourceTypeID)
+    )
+    ''')  
+
+    # Create a lookup table named 'ConstraintType'
+    cursor.execute('''
+    CREATE TABLE ConstraintType (
+        ConstraintTypeID INTEGER PRIMARY KEY,
+        ConstraintTypeName VARCHAR(50) UNIQUE)
+    ''')
+
+    # Create a table named 'Constraints'
+    cursor.execute('''
+    CREATE TABLE Constraints (
+        ConstraintID INTEGER PRIMARY KEY,
+        ProjectID INTEGER,
+        InteractionID INTEGER,
+        ConstraintTypeID INTEGER,
+        Description  VARCHAR,
+        Severity VARCHAR(10),
+        FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID),
+        FOREIGN KEY (InteractionID) REFERENCES InteractionLog(InteractionID),
+        FOREIGN KEY (ConstraintTypeID) REFERENCES ConstraintType(ConstraintTypeID)
+    )
+    ''')
+
+    # Create a lookup table named 'Requirements'
+    cursor.execute('''
+    CREATE TABLE RequirementCategories (
+        RequirementCategoryID INTEGER PRIMARY KEY,
+        RequirementCategoryName VARCHAR(75) UNIQUE)
+    ''')
+
+    # Create a table named 'Requirements'
+    cursor.execute('''
+    CREATE TABLE Requirements (
+        RequirementID INTEGER PRIMARY KEY,
+        ProjectID INTEGER,
+        InteractionID INTEGER,
+        Type BOOLEAN,
+        Description VARCHAR,
+        Status VARCHAR(10),
+        PriorityType VARCHAR(20),
+        RequirementCategoryID INTEGER,
+        FOREIGN KEY (ProjectID) REFERENCES Project(ProjectID),
+        FOREIGN KEY (InteractionID) REFERENCES InteractionLog(InteractionID),
+        FOREIGN KEY (RequirementCategoryID) REFERENCES RequirementCategories(RequirementCategoryID)
+    )
+    ''')
+
+    # Insert some example data into the industry table
+    industries = [
+        ('Aerospace & Defense',),
+        ('Automotive',),
+        ('Banking',),
+        ('Communications, Media & Technology',),
+        ('Education',),
+        ('Healthcare',),
+        ('Information Services',),
+        ('Insurance',),
+        ('Manufacturing',),
+        ('Oil & Gas',),
+        ('Blue Economy',),
+        ('Capital Markets',),
+        ('Consumer Goods',),
+        ('Life Sciences',)
+    ]
+    cursor.executemany('INSERT INTO industry (IndustryName) VALUES (?)', industries)
+
+    # Insert example data into the SourceType table
+    source_types = [
+        ('Email',),
+        ('Meeting Transcript',),
+        ('Chat',),
+        ('Document',)
+    ]
+    cursor.executemany('INSERT INTO SourceType (SourceTypeName) VALUES (?)', source_types)
+
+    # Insert example data into the ConstraintType table
+    constraint_types = [
+        ('Timeframe',),
+        ('Budget',),
+        ('Compliance',),
+        ('Tech limitations',),
+        ('Risk',),
+        ('Resources',)
+    ]
+    cursor.executemany('INSERT INTO ConstraintType (ConstraintTypeName) VALUES (?)', constraint_types)
+
+    conn.commit()
+    conn.close()
 
 
 def check_missing_fields(tabel_name,data):
@@ -24,10 +194,8 @@ def check_missing_fields(tabel_name,data):
 
     missing_fields = [key for key, value in essential_fields.items() if value == ""]
     if missing_fields:
-      print("Error: One or more required fields are Empty.")
       raise KeyError(f"{', '.join(missing_fields)}")
 
-    print("Details successfully extracted:")
     return essential_fields
 
   except KeyError as e:
@@ -57,7 +225,6 @@ def add_client(data):
                     essential_fields['Location'], essential_fields['IndustryID']))
     conn.commit()
     ClientID = cursor.lastrowid
-    print("Client details successfully added to the database.")
     return ClientID
 
   except sqlite3.Error as e:
@@ -67,7 +234,6 @@ def add_client(data):
       ClientID = result[0]
       return ClientID
     else:
-      print(f"Error1: {e}")
       return(f"Error: {e}")
 
 def add_project(data, Client_ID):
@@ -109,10 +275,8 @@ def add_project(data, Client_ID):
                     essential_fields['DeliveryModel'], essential_fields['ClientID']))
     conn.commit()
     ProjectID = cursor.lastrowid
-    print("Project details successfully added to the database.")
     return ProjectID
   except sqlite3.Error as e:
-    print(f"Error: {e}")
     return(f"Error: {e}")
   
 def add_project_technology(data,ProjectID):
@@ -143,7 +307,7 @@ def add_project_technology(data,ProjectID):
           pass
         else:
           return(f"Error: {e}")
-    return "Technology Stack successfully added to the database."
+    return True
 
 def add_Interaction_Log(data):
 
@@ -178,7 +342,6 @@ def add_Interaction_Log(data):
 
     if result:
       InteractionID = result[0]
-      print("InteractionLog details successfully added to the database.")
       return InteractionID
     else:
       cursor.execute("INSERT INTO InteractionLog (Timestamp, SourceTypeID, RawText, ExtractedSummary) VALUES (?, ?, ?, ?)",
@@ -186,11 +349,9 @@ def add_Interaction_Log(data):
                       essential_fields['ExtractedSummary']))
     conn.commit()
     InteractionID = cursor.lastrowid
-    print("InteractionLog details successfully added to the database.")
     return InteractionID
 
   except sqlite3.Error as e:
-    print(f"Error: {e}")
     return(f"Error: {e}")
 
 def add_Requirements(data,ProjectID):
@@ -249,10 +410,9 @@ def add_Requirements(data,ProjectID):
                           essential_fields['Description'], essential_fields['Status'], essential_fields['PriorityType'],
                           essential_fields['RequirementCategoryID']))
         conn.commit()
-        print("Requirements details successfully added to the database. \n")
 
     except sqlite3.Error as e:
-      print(f"Error: {e}")
+      return(f"Error: {e}")
   return True
 
 def add_Constraints(data,ProjectID):
@@ -296,52 +456,49 @@ def add_Constraints(data,ProjectID):
                         (essential_fields['ProjectID'], essential_fields['InteractionID'], essential_fields['ConstraintTypeID'],
                           essential_fields['Description'], essential_fields['Severity']))
         conn.commit()
-        print("Constraint details successfully added to the database. \n")
 
     except sqlite3.Error as e:
-      print(f"Error: {e}")
+      return(f"Error: {e}")
   return True
 
-def main(data: dict) -> str:
-    global conn, cursor
-    # Connect to the SQLite database
-    database_path = 'my_DB.db'
-    conn = sqlite3.connect(database_path)
-    cursor = conn.cursor()
+def main(data: dict):
 
+  global conn, cursor
+  # Connect to the SQLite database
+  database_path = 'my_DB.db'
+  conn = sqlite3.connect(database_path)
+  cursor = conn.cursor()
 
+  ClientID = add_client(data['Clients'])
+  if isinstance(ClientID, str):
+    return ClientID
+  
+  ProjectID = add_project(data['Project'], ClientID)
+  if isinstance(ProjectID, str):
+    return ProjectID
+  
+  tech_stack = add_project_technology(data['ProjectTechnology'], ProjectID)
+  if isinstance(tech_stack, str):
+    return tech_stack
+  
+  requirements = add_Requirements(data['Requirements'], ProjectID)
+  if isinstance(requirements, str):
+    return requirements       
+  
+  constraints = add_Constraints(data['Constraints'], ProjectID)
+  if isinstance(constraints, str):
+    return constraints    
+    
+  conn.close()
+  return True
 
-    ClientID = add_client(data['Clients'])
-    if isinstance(ClientID, str):
-      return ClientID
-    
-    ProjectID = add_project(data['Project'], ClientID)
-    if isinstance(ProjectID, str):
-      return ProjectID
-    
-    tech_stack = add_project_technology(data['ProjectTechnology'], ProjectID)
-    if isinstance(tech_stack, str):
-      return tech_stack
-    
-    requirements = add_Requirements(data['Requirements'], ProjectID)
-    if isinstance(requirements, str):
-      return requirements       
-    
-    constraints = add_Constraints(data['Constraints'], ProjectID)
-    if isinstance(constraints, str):
-      return constraints    
-    
-    
-    
-
-
-    conn.close()
 
 
 
 if __name__ == "__main__":
+    create_database()
     input_file = 'test.json'
     with open(input_file, 'r') as file:
         input = json.load(file)
-    main(input)
+    print(main(input))
 

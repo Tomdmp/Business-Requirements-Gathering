@@ -12,6 +12,7 @@ from langchain_community.document_loaders import UnstructuredWordDocumentLoader
 from langgraph.graph import START, StateGraph
 from langchain_core.messages import HumanMessage
 from langchain.schema import SystemMessage
+from Rag_to_DB import create_database,main as Rag_to_DB 
 
 # Page configuration
 st.set_page_config(page_title="RAG-Powered Trackbot", page_icon="🤖", layout="wide")
@@ -205,6 +206,7 @@ def main():
     # Initialize components
     embedding_model, vector_store = initialize_rag_components()
     llm = load_llm()
+    create_database()
     
     if not embedding_model or not vector_store or not llm:
         st.error("Failed to initialize components. Please check your configuration and ensure 'knowledge base.docx' exists.")
@@ -269,7 +271,13 @@ def main():
                         response = llm.invoke([HumanMessage(content=prompt_text)])
                         response = response.content
                         response = response.replace("```json", "").replace("```", "")
-                        print(response)
+                        response = json.loads(response)
+                        ans = Rag_to_DB(response)
+                        if isinstance(ans, bool):
+                            st.success("JSON generated and saved successfully!", icon="✅")
+                        else:
+                            st.error(f"{ans}", icon="❌")
+                            
 
                                                                                                                         
         
